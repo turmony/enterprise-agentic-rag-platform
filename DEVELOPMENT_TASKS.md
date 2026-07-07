@@ -55,10 +55,10 @@
 - [ ] 配置 Qdrant 服务
 - [ ] 配置 Elasticsearch 服务
 - [ ] 配置 Ollama 服务连接说明
-- [ ] 拉取默认主推理模型 `qwen3:14b-q4_K_M`
-- [ ] 拉取快速推理模型 `qwen3:8b-q4_K_M`
-- [ ] 拉取默认嵌入模型 `bge-m3:latest`
-- [ ] 可选拉取长上下文实验模型 `qwen3.5:9b-q4_K_M`
+- [ ] 拉取默认主推理模型 `qwen3:14b`
+- [ ] 拉取快速推理模型 `qwen3.5:9b`
+- [ ] 拉取默认嵌入模型 `qwen3-embedding:4b`
+- [ ] 确认 `qwen3.5:9b` 同时作为长上下文备选模型
 - [ ] 编写 `.env.example`
 - [ ] 规划本地数据卷目录
 - [ ] 配置服务健康检查
@@ -232,7 +232,7 @@
 - [ ] 实现 chunk content hash
 - [ ] 保存 chunk 到 PostgreSQL
 - [ ] 配置 Ollama Embedding 模型
-- [ ] 默认 Embedding 模型固定为 `bge-m3:latest`
+- [ ] 默认 Embedding 模型固定为 `qwen3-embedding:4b`
 - [ ] 记录 chunk 使用的 embedding model name
 - [ ] 记录 chunk 使用的 embedding vector dimension
 - [ ] 实现 Embedding 模型变更后的重建索引提示
@@ -316,8 +316,9 @@
 - [ ] 配置 Python 依赖管理
 - [ ] 配置 LangGraph
 - [ ] 配置 Ollama LLM 客户端
-- [ ] 配置默认主推理模型 `qwen3:14b-q4_K_M`
-- [ ] 配置快速推理模型 `qwen3:8b-q4_K_M`
+- [ ] 配置默认主推理模型 `qwen3:14b`
+- [ ] 配置快速推理模型 `qwen3.5:9b`
+- [ ] 配置长上下文备选模型 `qwen3.5:9b`
 - [ ] 支持按 Agent 节点选择模型
 - [ ] 支持配置 `num_ctx`、temperature、timeout
 - [ ] 配置 Java Backend 客户端
