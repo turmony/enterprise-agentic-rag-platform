@@ -1,0 +1,68 @@
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Logs
+*.log
+logs/
+
+# Java / Spring Boot
+target/
+*.class
+*.jar
+*.war
+*.ear
+*.iml
+.mvn/wrapper/maven-wrapper.jar
+
+# Gradle
+.gradle/
+build/
+
+# Node / frontend
+node_modules/
+dist/
+dist-ssr/
+.next/
+out/
+.turbo/
+.npm/
+.pnpm-store/
+
+# Python / LangGraph runtime
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+env/
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Docker / local data
+docker-data/
+data/
+uploads/
+minio-data/
+postgres-data/
+qdrant-data/
+elasticsearch-data/
+
+# Test / coverage
+coverage/
+htmlcov/
+.coverage
+junit.xml
+
+# Generated artifacts
+*.tmp
+*.bak
