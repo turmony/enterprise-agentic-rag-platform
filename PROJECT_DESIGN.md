@@ -68,6 +68,39 @@ Agent Runtime：
 - Ollama 本地 Embedding
 - 不接入外部云模型 API
 
+推荐 Ollama 模型配置：
+
+| 用途 | 推荐模型 | 说明 |
+| --- | --- | --- |
+| 主推理模型 | `qwen3:14b-q4_K_M` | 默认用于 Answer Generation、Verification、复杂 Query Planning。模型约 9.3GB，适合 RTX 4060 Ti 16GB 显存，中文能力和推理质量较均衡。 |
+| 快速推理模型 | `qwen3:8b-q4_K_M` | 用于 Supervisor、简单 Query Planning、Memory Manager 等低成本节点。模型约 5.2GB，响应更快。 |
+| 嵌入模型 | `bge-m3:latest` | 默认 Embedding 模型。支持多语言和多粒度检索，适合中文企业文档 RAG。模型约 1.2GB，8K context。 |
+| 长上下文备选 | `qwen3.5:9b-q4_K_M` | 可选，用于长文档总结或长上下文实验。模型约 6.6GB，256K context。 |
+
+本机推荐配置为 RTX 4060 Ti 16GB + 32GB 内存，默认不启用 27B/30B 级模型作为主模型。`qwen3.5:27b-int4` 或 `qwen3:30b-a3b-q4_K_M` 这类模型会接近或超过 16GB 显存，容易出现 CPU offload、延迟明显升高和多 Agent 并发不稳定问题，适合作为后续离线评测实验，不作为 MVP 默认模型。
+
+推荐拉取命令：
+
+```bash
+ollama pull qwen3:14b-q4_K_M
+ollama pull qwen3:8b-q4_K_M
+ollama pull bge-m3:latest
+```
+
+可选长上下文实验模型：
+
+```bash
+ollama pull qwen3.5:9b-q4_K_M
+```
+
+运行策略：
+
+- 默认主流程使用 `qwen3:14b-q4_K_M`。
+- 简单节点可切换到 `qwen3:8b-q4_K_M` 降低延迟。
+- Embedding 固定使用 `bge-m3:latest`，避免更换模型导致历史向量不可比。
+- MVP 阶段不建议并行跑多个 LLM 节点，避免 16GB 显存被 KV cache 和模型权重挤满。
+- chunk 入库后如果更换 Embedding 模型，必须重新生成向量并重建 Qdrant collection。
+
 前端：
 
 - 管理后台：[vbenjs/vue-vben-admin](https://github.com/vbenjs/vue-vben-admin)
