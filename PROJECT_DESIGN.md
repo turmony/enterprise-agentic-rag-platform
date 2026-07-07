@@ -23,8 +23,8 @@ Java 后端能力：
 
 - 模块化单体架构设计
 - Sa-Token 登录与权限控制
-- 文档上传、解析、切片、索引任务
-- PostgreSQL / Redis / MinIO / Qdrant / Elasticsearch 集成
+- 文档上传、解析、切片、异步索引任务
+- PostgreSQL / Redis / RabbitMQ / MinIO / Qdrant / Elasticsearch 集成
 - Agent Run、Trace、审计、评测数据建模
 - SSE 流式接口与服务间调用
 
@@ -48,6 +48,7 @@ Agent 开发能力：
 - MyBatis Plus
 - Sa-Token
 - Redis
+- RabbitMQ
 - PostgreSQL 16
 - MinIO
 - Qdrant
@@ -114,6 +115,7 @@ flowchart TD
 
     B --> PG["PostgreSQL"]
     B --> R["Redis"]
+    B --> MQ["RabbitMQ"]
     B --> M["MinIO"]
     B --> Q["Qdrant"]
     B --> ES["Elasticsearch"]
@@ -131,6 +133,7 @@ flowchart TD
 - LangGraph 不绕过 Java 后端访问 Qdrant / Elasticsearch。
 - 检索、权限过滤、审计、长期记忆由 Java 后端统一控制。
 - LangGraph 负责编排 Agent 工作流和推理状态。
+- RabbitMQ 负责文档解析、embedding、索引、评测等异步任务削峰，不替代 Redis 缓存和 SSE 实时推送。
 
 ## 5. 服务边界
 
@@ -139,6 +142,7 @@ Spring Boot 后端负责：
 - 用户、部门、角色、登录认证
 - 知识库与成员权限
 - 文档上传、解析、切片、索引
+- RabbitMQ 异步任务投递、消费、重试和死信处理
 - Ollama Embedding 调用
 - Qdrant 向量检索
 - Elasticsearch BM25 检索
@@ -150,6 +154,36 @@ Spring Boot 后端负责：
 - RAG 评测数据
 - 审计日志
 - SSE 事件推送
+
+RabbitMQ 异步任务设计：
+
+- 文档上传接口只负责保存文件、创建任务和投递消息，不同步完成解析和索引。
+- 文档解析、chunk 切分、embedding、Qdrant 写入、Elasticsearch 写入拆成异步任务，支持削峰和失败重试。
+- RAG 批量评测通过 RabbitMQ 异步执行，避免长时间占用 HTTP 请求线程。
+- Agent Trace 高频事件可以先同步写关键状态，非关键指标和审计事件异步落库。
+- 用户聊天主链路仍保持 HTTP + SSE 流式交互，RabbitMQ 不参与 token 级实时输出。
+
+推荐交换机与队列：
+
+| 类型 | 名称 | 用途 |
+| --- | --- | --- |
+| Topic Exchange | `rag.task.exchange` | 文档、索引、评测等任务消息 |
+| Topic Exchange | `rag.event.exchange` | Trace、审计、指标等事件消息 |
+| Queue | `rag.document.parse.q` | 文档解析任务 |
+| Queue | `rag.document.chunk.q` | 文档切片任务 |
+| Queue | `rag.document.embedding.q` | chunk embedding 任务 |
+| Queue | `rag.document.index.q` | Qdrant / Elasticsearch 索引任务 |
+| Queue | `rag.eval.run.q` | RAG 批量评测任务 |
+| Queue | `rag.agent.event.q` | Agent Trace 非关键事件异步处理 |
+| Dead Letter Queue | `rag.task.dlq` | 任务失败死信队列 |
+
+消息可靠性策略：
+
+- 所有任务消息携带 `task_id`、`doc_id`、`kb_id`、`retry_count`、`trace_id`。
+- 消费端必须做幂等校验，避免重复解析、重复 embedding、重复索引。
+- 文档任务状态以 PostgreSQL 为准，RabbitMQ 只负责传递任务。
+- 失败任务进入重试队列，超过最大重试次数后进入 DLQ，并在后台显示失败原因。
+- 对 embedding 和索引任务设置并发上限，避免本地 Ollama 和 4060 Ti 显存被打满。
 
 LangGraph Runtime 负责：
 
@@ -331,12 +365,17 @@ class RagAgentState(TypedDict):
 ```mermaid
 flowchart TD
     UP["Upload File"] --> M["Save to MinIO"]
-    M --> P["Parse Text"]
-    P --> C["Chunk"]
+    M --> T["Create Parse Task"]
+    T --> MQ1["RabbitMQ: document.parse"]
+    MQ1 --> P["Parse Text"]
+    P --> MQ2["RabbitMQ: document.chunk"]
+    MQ2 --> C["Chunk"]
     C --> DB["Save Chunk Metadata"]
-    DB --> E["Ollama Embedding"]
-    E --> Q["Write Qdrant"]
-    DB --> ES["Write Elasticsearch"]
+    DB --> MQ3["RabbitMQ: document.embedding"]
+    MQ3 --> E["Ollama Embedding"]
+    E --> MQ4["RabbitMQ: document.index"]
+    MQ4 --> Q["Write Qdrant"]
+    MQ4 --> ES["Write Elasticsearch"]
     Q --> OK["Indexed"]
     ES --> OK
 ```
@@ -399,6 +438,8 @@ PostgreSQL 作为业务权威数据源。LangGraph checkpoint 由 PostgreSQL Che
 - `memory_access_log`
 - `human_review_task`
 - `human_review_record`
+- `mq_message_log`
+- `mq_dead_letter_log`
 - `eval_dataset`
 - `eval_case`
 - `eval_run`
@@ -406,6 +447,30 @@ PostgreSQL 作为业务权威数据源。LangGraph checkpoint 由 PostgreSQL Che
 - `model_config`
 - `prompt_template`
 - `audit_log`
+
+`mq_message_log` 关键字段：
+
+- `message_id`
+- `exchange_name`
+- `routing_key`
+- `biz_type`
+- `biz_id`
+- `message_status`
+- `retry_count`
+- `error_message`
+- `created_time`
+- `updated_time`
+
+`mq_dead_letter_log` 关键字段：
+
+- `message_id`
+- `source_queue`
+- `biz_type`
+- `biz_id`
+- `payload_json`
+- `error_message`
+- `retry_count`
+- `created_time`
 
 `kb_document` 关键字段：
 
@@ -628,7 +693,7 @@ LangGraph 使用 interrupt 暂停，人工审核后通过 Command resume。
    覆盖权限判断、chunk 切分、检索结果合并、引用格式化、状态路由函数。
 
 2. 集成测试  
-   覆盖 PostgreSQL、Redis、MinIO、Qdrant、Elasticsearch、Ollama mock 或测试实例。
+   覆盖 PostgreSQL、Redis、RabbitMQ、MinIO、Qdrant、Elasticsearch、Ollama mock 或测试实例。
 
 3. 契约测试  
    覆盖 Spring Boot 与 LangGraph Runtime 的请求响应结构。
@@ -657,7 +722,7 @@ MVP：
 - Spring Boot 基础项目
 - Docker Compose 基础设施
 - 知识库与文档上传
-- 文档解析、切片、Embedding、索引
+- RabbitMQ 异步文档解析、切片、Embedding、索引
 - Java Retrieval API
 - LangGraph 基础多 Agent 流程
 - Agent Run / Trace

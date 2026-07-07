@@ -51,6 +51,8 @@
 - [ ] 编写 `deploy/docker-compose.yml`
 - [ ] 配置 PostgreSQL 16 服务
 - [ ] 配置 Redis 服务
+- [ ] 配置 RabbitMQ 服务
+- [ ] 开启 RabbitMQ Management 插件
 - [ ] 配置 MinIO 服务
 - [ ] 配置 Qdrant 服务
 - [ ] 配置 Elasticsearch 服务
@@ -69,6 +71,8 @@
 
 - [ ] PostgreSQL 连接测试
 - [ ] Redis ping 测试
+- [ ] RabbitMQ 连接测试
+- [ ] RabbitMQ exchange / queue 声明测试
 - [ ] MinIO bucket 创建测试
 - [ ] Qdrant collection 创建测试
 - [ ] Elasticsearch health 测试
@@ -93,6 +97,13 @@
 - [ ] 集成 Sa-Token
 - [ ] 集成 PostgreSQL 驱动
 - [ ] 集成 Redis 客户端
+- [ ] 集成 Spring AMQP
+- [ ] 配置 RabbitMQ 连接参数
+- [ ] 配置 RabbitTemplate
+- [ ] 配置消息监听容器
+- [ ] 配置消息确认机制
+- [ ] 配置任务重试策略
+- [ ] 配置死信交换机和死信队列
 - [ ] 集成 MinIO SDK
 - [ ] 配置统一响应结构
 - [ ] 配置统一异常处理
@@ -107,6 +118,10 @@
 - [ ] Spring Context 启动测试
 - [ ] 数据库连接测试
 - [ ] Redis 连接测试
+- [ ] RabbitMQ 连接测试
+- [ ] RabbitMQ 消息发送测试
+- [ ] RabbitMQ 消息消费测试
+- [ ] RabbitMQ 死信投递测试
 - [ ] MyBatis Plus Mapper 基础测试
 - [ ] 全局异常处理测试
 - [ ] 参数校验测试
@@ -169,6 +184,8 @@
 - [ ] 设计 `kb_document_index_task`
 - [ ] 实现文档上传接口
 - [ ] 上传文件保存到 MinIO
+- [ ] 上传成功后创建解析任务
+- [ ] 上传成功后投递 `document.parse` 消息
 - [ ] 记录 `original_file_name`
 - [ ] 记录 `display_name`
 - [ ] 记录 `file_ext`
@@ -183,6 +200,10 @@
 - [ ] 实现 TXT 解析
 - [ ] 实现 HTML 解析
 - [ ] 实现解析失败状态记录
+- [ ] 实现解析任务消费端
+- [ ] 实现解析任务幂等处理
+- [ ] 实现解析任务失败重试
+- [ ] 实现解析任务死信记录
 - [ ] 实现文档禁用
 - [ ] 实现文档删除
 - [ ] 实现文档重新解析
@@ -210,6 +231,10 @@
 - [ ] HTML 解析测试
 - [ ] 文件 hash 去重测试
 - [ ] MinIO 上传测试
+- [ ] 文档上传后消息投递测试
+- [ ] 解析任务重复消费幂等测试
+- [ ] 解析任务失败重试测试
+- [ ] 解析任务死信测试
 - [ ] 解析失败状态测试
 - [ ] 引用定位字段完整性测试
 
@@ -231,6 +256,7 @@
 - [ ] 实现 PPT chunk 策略
 - [ ] 实现 chunk content hash
 - [ ] 保存 chunk 到 PostgreSQL
+- [ ] 切片完成后投递 `document.embedding` 消息
 - [ ] 配置 Ollama Embedding 模型
 - [ ] 默认 Embedding 模型固定为 `qwen3-embedding:4b`
 - [ ] 记录 chunk 使用的 embedding model name
@@ -239,10 +265,16 @@
 - [ ] 实现 Ollama Embedding 客户端
 - [ ] 实现 embedding 批处理
 - [ ] 实现 embedding 失败重试
+- [ ] 实现 embedding 消费端
+- [ ] 实现 embedding 幂等处理
+- [ ] embedding 完成后投递 `document.index` 消息
 - [ ] 创建 Qdrant collection
 - [ ] 写入 Qdrant point
 - [ ] 创建 Elasticsearch index
 - [ ] 写入 Elasticsearch document
+- [ ] 实现索引消费端
+- [ ] 实现索引幂等处理
+- [ ] 实现索引失败死信记录
 - [ ] 实现重新索引
 - [ ] 实现索引状态统计
 
@@ -255,8 +287,12 @@
 - [ ] overlap 测试
 - [ ] embedding mock 测试
 - [ ] embedding 批处理测试
+- [ ] embedding 消息消费测试
+- [ ] embedding 重复消息幂等测试
 - [ ] Qdrant 写入测试
 - [ ] Elasticsearch 写入测试
+- [ ] 索引消息消费测试
+- [ ] 索引失败死信测试
 - [ ] 重复 chunk 去重测试
 - [ ] 重新索引测试
 
@@ -410,6 +446,7 @@
 - [ ] 调用 LangGraph Runtime
 - [ ] 实现 `/internal/agent/events`
 - [ ] trace event 落库
+- [ ] 非关键 trace event 支持异步消息落库
 - [ ] 更新 agent_run 状态
 - [ ] 实现 `/api/agent/runs/{runId}/stream`
 - [ ] 推送 RUN_STARTED
@@ -441,6 +478,7 @@
 - [ ] message API 测试
 - [ ] agent_run 状态流转测试
 - [ ] trace event 落库测试
+- [ ] 异步 trace event 消费测试
 - [ ] SSE 事件格式测试
 - [ ] 前端 SSE 解析测试
 
@@ -579,6 +617,9 @@
 - [ ] 实现评测样例导入
 - [ ] 实现评测样例编辑
 - [ ] 实现批量评测任务
+- [ ] 批量评测任务投递 `eval.run` 消息
+- [ ] 实现评测任务消费端
+- [ ] 实现评测任务失败重试和死信
 - [ ] 调用 Agent Runtime 执行评测
 - [ ] 计算 retrieval_recall
 - [ ] 计算 retrieval_precision
@@ -600,6 +641,8 @@
 - [ ] citation_accuracy 计算测试
 - [ ] refusal_accuracy 计算测试
 - [ ] eval_run 状态流转测试
+- [ ] eval.run 消息消费测试
+- [ ] eval.run 死信测试
 - [ ] 评测看板数据聚合测试
 
 ### 验收标准
@@ -667,6 +710,7 @@
 - [ ] 全量 Agent Runtime 测试
 - [ ] 前端构建测试
 - [ ] Docker Compose 一键启动测试
+- [ ] RabbitMQ 异步任务链路测试
 - [ ] 端到端演示链路测试
 
 ### 验收标准
@@ -680,6 +724,8 @@
 - [ ] 本地 Docker Compose 可一键启动基础依赖
 - [ ] Spring Boot 后端可启动
 - [ ] LangGraph Runtime 可启动
+- [ ] RabbitMQ 可访问 Management UI
+- [ ] 文档解析、embedding、索引通过 RabbitMQ 异步执行
 - [ ] 管理后台可登录
 - [ ] 聊天页面可提问
 - [ ] 至少支持 3 类文档完成上传、解析、索引、问答、引用
